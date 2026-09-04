@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #071711; --bg-2: #0b1f18; --panel: rgba(10, 22, 18, 0.9);
+      --line: rgba(126, 247, 188, 0.18); --text: #ebfff5; --muted: #9cc4ae;
+      --accent: #7ef7bc; --accent-2: #52d79a; --success: #7ef7bc;
+      --danger: #ff7f8c; --warning: #f4d66b; --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; font-family: "Inter", sans-serif; background: radial-gradient(circle at top left, rgba(126, 247, 188, 0.12), transparent 30%), radial-gradient(circle at bottom right, rgba(126, 247, 188, 0.07), transparent 22%), var(--bg); color: var(--text); }
+    a { text-decoration: none; }
+    button, input, select { font: inherit; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 22px 18px 60px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 22px; background: rgba(10, 24, 20, 0.85); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); backdrop-filter: blur(10px); }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #062d1f; font-size: 1.1rem; font-weight: 800; }
+    .brand small { display: block; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.68rem; }
+    .brand h1 { margin: 4px 0 0; font-size: 1.04rem; }
+    .nav { display: flex; align-items: center; gap: 28px; }
+    .nav a { color: var(--muted); font-weight: 500; }
+    .nav a:hover { color: var(--text); }
+    .btn-primary { border: none; padding: 12px 18px; border-radius: 12px; color: #062d1f; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent-2)); cursor: pointer; box-shadow: 0 12px 28px rgba(126, 247, 188, 0.2); }
+    .btn-secondary { border: 1px solid var(--line); background: rgba(126, 247, 188, 0.04); color: var(--text); padding: 12px 18px; border-radius: 12px; cursor: pointer; }
+    .hero { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 24px; margin-top: 28px; padding: 28px; border-radius: 30px; background: linear-gradient(135deg, rgba(17, 32, 27, 0.95), rgba(7, 20, 17, 0.92)); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .hero-copy { display: flex; flex-direction: column; justify-content: center; }
+    .tag { display: inline-block; width: fit-content; padding: 8px 14px; border-radius: 999px; background: rgba(126, 247, 188, 0.08); border: 1px solid rgba(126, 247, 188, 0.22); color: var(--accent); font-size: 0.74rem; letter-spacing: 0.04em; font-weight: 700; }
+    .hero h2 { margin-top: 18px; font-size: clamp(2.2rem, 4vw, 4.2rem); line-height: 1.02; letter-spacing: -0.06em; }
+    .hero p { margin-top: 16px; max-width: 560px; color: var(--muted); line-height: 1.7; font-size: 1.02rem; }
+    .hero-actions { margin-top: 24px; display: flex; gap: 14px; }
+    .hero-visual { position: relative; display: flex; justify-content: center; align-items: center; min-height: 420px; }
+    .photo-card { width: min(100%, 520px); overflow: hidden; border-radius: 28px; border: 1px solid rgba(126, 247, 188, 0.2); box-shadow: var(--shadow); }
+    .photo-card img { width: 100%; height: 520px; object-fit: cover; display: block; filter: saturate(0.85) contrast(1.02); }
+    .stats-header { display: flex; justify-content: space-between; align-items: center; margin-top: 36px; }
+    .stats-header h3 { margin: 0; color: var(--muted); font-size: 0.95rem; letter-spacing: 0.05em; text-transform: uppercase; }
+    .range-select { padding: 8px 14px; border-radius: 10px; background: rgba(10, 22, 18, 0.9); color: var(--text); border: 1px solid rgba(126, 247, 188, 0.18); outline: none; cursor: pointer; font-family: inherit; font-size: 0.85rem; font-weight: 500; transition: border-color 0.2s ease; }
+    .range-select:focus { border-color: var(--accent); }
+    .stats-grid { margin-top: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+    .stat-card, .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); }
+    .stat-card { display: flex; align-items: center; gap: 14px; padding: 20px 18px; }
+    .stat-card.accent { background: linear-gradient(135deg, rgba(126, 247, 188, 0.06), rgba(14, 30, 25, 0.95)); }
+    .stat-icon { width: 54px; height: 54px; border-radius: 18px; display: grid; place-items: center; background: rgba(126, 247, 188, 0.09); font-size: 1.5rem; flex-shrink: 0; }
+    .stat-card span { display: block; color: var(--muted); margin-bottom: 8px; font-size: 0.85rem; }
+    .stat-card h3 { font-size: clamp(1.2rem, 2vw, 1.8rem); margin: 0; }
+    .content-grid { margin-top: 26px; display: grid; grid-template-columns: 1.7fr 0.9fr; gap: 22px; }
+    .panel { padding: 22px; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; }
+    .section-label { display: block; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.7rem; margin-bottom: 8px; }
+    .panel-header h3 { margin: 0; }
+    .segmented { display: inline-flex; gap: 4px; background: rgba(126, 247, 188, 0.03); border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+    .segmented button { border: none; background: transparent; color: var(--muted); padding: 10px 14px; border-radius: 99px; cursor: pointer; }
+    .segmented button.active { color: var(--text); background: rgba(126, 247, 188, 0.12); }
+    .gauge-wrap { display: grid; place-items: center; margin-top: 10px; }
+    .gauge-ring { --value: 0; --ring-color: var(--accent); width: 220px; height: 220px; border-radius: 50%; background: conic-gradient(var(--ring-color) calc(var(--value) * 1%), rgba(255,255,255,0.06) 0); display: grid; place-items: center; position: relative; }
+    .gauge-ring::before { content: ""; position: absolute; inset: 18px; border-radius: 50%; background: #091812; border: 1px solid var(--line); }
+    .gauge-center { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .gauge-center strong { font-size: 2rem; }
+    .gauge-center span { color: var(--muted); }
+    .gauge-legend { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; color: var(--muted); }
+    .gauge-legend div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .dot { width: 10px; height: 10px; display: inline-block; border-radius: 50%; margin-right: 8px; }
+    .dot.income { background: var(--accent); }
+    .dot.expense { background: var(--danger); }
+    .variance-list { display: flex; flex-direction: column; gap: 12px; }
+    .variance-item { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; background: rgba(126, 247, 188, 0.03); border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px; }
+    .chart-container { position: relative; width: 100%; height: 330px; }
+    .forms-grid { margin-top: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .form-card { padding: 22px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    form { display: flex; flex-direction: column; gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 8px; position: relative; }
+    .field label { font-size: 0.88rem; color: var(--muted); }
+    .field input, .field select { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,0.02); color: var(--text); outline: none; }
+    .field input:focus, .field select:focus { border-color: rgba(126, 247, 188, 0.42); }
+    select, option { background: #0d1d18; color: var(--text); }
+    .submit-btn { border: none; padding: 12px 16px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #052d1d; font-weight: 800; cursor: pointer; }
+    .table-card { margin-top: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: 22px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    th, td { text-align: left; padding: 16px 12px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem; }
+    .type-pill { display: inline-flex; border-radius: 999px; padding: 6px 10px; font-size: 0.72rem; font-weight: 700; }
+    .type-pill.income { background: rgba(126, 247, 188, 0.12); color: var(--accent); }
+    .type-pill.expense { background: rgba(255, 127, 140, 0.12); color: #ffb3bc; }
+    .del-btn, .del-budget-btn { background: transparent; border: none; color: var(--danger); cursor: pointer; font-weight: 700; }
+
+    /* Search Dropdown Styles */
+    .search-results {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+      background: #0d1d18; border: 1px solid var(--line); border-radius: 12px;
+      max-height: 220px; overflow-y: auto; box-shadow: var(--shadow); display: none;
+    }
+    .search-item {
+      padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.85rem; color: var(--text);
+    }
+    .search-item:hover { background: rgba(126, 247, 188, 0.1); color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">₹</div>
+      <div>
+        <small id="dbStatus">Connecting to DB...</small>
+        <h1>Expense Analyzer</h1>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="#overview">Overview</a>
+      <a href="#budget">Budget Planner</a>
+      <a href="#insights">Insights</a>
+      <a href="#transactions">Transactions</a>
+      <a href="#investments" style="color: var(--accent);">Portfolio</a>
+    </nav>
+    <button class="btn-primary" onclick="fetchTransactions()">Refresh DB</button>
+  </header>
+
+  <section class="hero" id="overview">
+    <div class="hero-copy">
+      <span class="tag">Financial Health • Dashboard</span>
+      <h2>Budget smarter. Spend better. Grow faster.</h2>
+      <p>Monitor your income, manage your budgets, and track multi-asset investment returns directly inside your dashboard.</p>
+      <div class="hero-actions">
+        <button class="btn-primary" id="viewTrendsBtn">View Trends</button>
+        <button class="btn-secondary" id="setBudgetBtn">Set Budget</button>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="photo-card">
+        <img src="/gpay.jpg" alt="Finance dashboard" />
+      </div>
+    </div>
+  </section>
+
+  <div class="stats-header">
+    <h3>Summary Statistics</h3>
+    <select id="overviewRange" class="range-select">
+      <option value="monthly" selected>This Month</option>
+      <option value="quarterly">This Quarter</option>
+      <option value="yearly">This Year</option>
+    </select>
+  </div>
+
+  <section class="stats-grid">
+    <article class="stat-card accent"><div class="stat-icon">📈</div><div><span id="label-income">Monthly Income</span><h3 id="sum-income">₹0</h3></div></article>
+    <article class="stat-card"><div class="stat-icon">📉</div><div><span id="label-expense">Monthly Expense</span><h3 id="sum-expense">₹0</h3></div></article>
+    <article class="stat-card"><div class="stat-icon">💰</div><div><span id="label-saved">Monthly Saved</span><h3 id="sum-saved">₹0</h3></div></article>
+    <article class="stat-card" style="justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div class="stat-icon">🎯</div>
+        <div>
+          <span id="label-budget">Monthly Budget Left</span>
+          <h3 id="budget-left">₹0</h3>
+        </div>
+      </div>
+      <select id="budgetCardCategory" class="range-select" style="padding: 4px 8px; font-size: 0.75rem;">
+        <option value="ALL" selected>All</option>
+        <option value="Housing">Housing</option>
+        <option value="Food">Food</option>
+        <option value="Travel">Travel</option>
+        <option value="Bills">Bills</option>
+        <option value="Leisure">Leisure</option>
+        <option value="Other">Other</option>
+      </select>
+    </article>
+  </section>
+
+  <section class="content-grid" id="budget">
+    <article class="panel">
+      <div class="panel-header">
+        <div><span class="section-label">Budget Planner</span><h3>Spending Trend</h3></div>
+        <div class="segmented" id="rangeSwitcher">
+          <button class="active" data-range="daily">Daily</button>
+          <button data-range="monthly">Monthly</button>
+          <button data-range="quarterly">Quarterly</button>
+          <button data-range="yearly">Yearly</button>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="budgetChart"></canvas></div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header"><div><span class="section-label">Financial Balance</span><h3>Income vs Expense</h3></div></div>
+      <div class="gauge-wrap">
+        <div class="gauge-ring" id="gaugeRing">
+          <div class="gauge-center"><strong id="gaugeValue">0.00%</strong><span>Spent</span></div>
+        </div>
+      </div>
+      <div class="gauge-legend">
+        <div><div><span class="dot income"></span>Income</div><strong id="legend-income">₹0</strong></div>
+        <div><div><span class="dot expense"></span>Expense</div><strong id="legend-expense">₹0</strong></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="content-grid" id="insights" style="margin-top: 26px;">
+    <article class="panel">
+      <div class="panel-header"><div><span class="section-label">Breakdown</span><h3>Category Allocation</h3></div></div>
+      <div class="chart-container"><canvas id="categoryChart"></canvas></div>
+    </article>
+    <article class="panel">
+      <div class="panel-header"><div><span class="section-label">Variance Analysis</span><h3>Spend vs Budget</h3></div></div>
+      <div id="varianceList" class="variance-list"></div>
+    </article>
+  </section>
+
+  <section class="forms-grid">
+    <div class="form-card" id="budget-form-card">
+      <div class="panel-header"><div><span class="section-label">Database</span><h3>Edit Budget</h3></div></div>
+      <form id="budgetForm" style="margin-bottom: 24px;">
+        <div class="field">
+          <label for="budgetCategory">Category</label>
+          <select id="budgetCategory">
+            <option value="Housing">Housing</option>
+            <option value="Food">Food</option>
+            <option value="Travel">Travel</option>
+            <option value="Bills">Bills</option>
+            <option value="Leisure">Leisure</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="budgetAmount">Monthly Budget Limit</label>
+          <input id="budgetAmount" type="number" min="1" step="1" placeholder="Enter budget" required />
+        </div>
+        <button class="submit-btn" type="submit">Update DB Budget</button>
+      </form>
+
+      <h4 style="margin-bottom: 12px; font-size: 0.9rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px;">Current Budgets</h4>
+      <div class="table-wrap" style="max-height: 250px; overflow-y: auto;">
+        <table>
+          <thead><tr><th>Category</th><th>Limit</th><th>Action</th></tr></thead>
+          <tbody id="budgetTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-card" id="entry-form-card">
+      <div class="panel-header"><div><span class="section-label">Database</span><h3>Add DB Entry</h3></div></div>
+      <form id="entryForm">
+        <div class="field">
+          <label for="entryTitle">Title / Description</label>
+          <input id="entryTitle" type="text" placeholder="e.g. Groceries" required />
+        </div>
+        <div class="field">
+          <label for="entryType">Type</label>
+          <select id="entryType">
+            <option value="INCOME">Income</option>
+            <option value="EXPENSE" selected>Expense</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="entryCategory">Category</label>
+          <select id="entryCategory"></select>
+        </div>
+        <div class="field">
+          <label for="entryPayment">Payment Method</label>
+          <select id="entryPayment">
+            <option value="Cash">Cash</option>
+            <option value="Credit Card">Credit Card</option>
+            <option value="Debit Card">Debit Card</option>
+            <option value="UPI">UPI</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="entryAmount">Amount</label>
+          <input id="entryAmount" type="number" min="1" step="1" placeholder="Amount" required />
+        </div>
+        <div class="field">
+          <label for="entryDate">Date</label>
+          <input id="entryDate" type="date" required />
+        </div>
+        <button class="submit-btn" type="submit">Save to Database</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Multi-Asset Investment Tracker Section -->
+  <section class="forms-grid" id="investments" style="margin-top: 40px; border-top: 1px solid var(--line); padding-top: 40px;">
+    <div class="form-card">
+      <div class="panel-header"><div><span class="section-label">Live Tracker</span><h3>Log Investment</h3></div></div>
+      <form id="investmentForm">
+        <div class="field">
+          <label for="invCategory">Category</label>
+          <select id="invCategory">
+            <option value="Stocks">Stocks (Live Yahoo Finance)</option>
+            <option value="Crypto">Cryptocurrency (CoinGecko)</option>
+            <option value="Bonds">Bonds (Yield Accrual)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="invSearch">Search / Select Asset</label>
+          <input id="invSearch" type="text" placeholder="Type to search (e.g. MRF, ICICI, Bitcoin)..." required autocomplete="off" />
+          <div id="searchResults" class="search-results"></div>
+          <input type="hidden" id="invAssetId" />
+          <input type="hidden" id="invAssetName" />
+        </div>
+
+        <div class="field" id="yieldField" style="display: none;">
+          <label for="invYield">Annual Coupon / Interest Rate (%)</label>
+          <input id="invYield" type="number" step="0.01" min="0" placeholder="e.g. 7.5" value="7.0" />
+        </div>
+
+        <div class="field">
+          <label for="invBuyPrice">Buy Price / Unit Cost (₹ / $)</label>
+          <input id="invBuyPrice" type="number" step="0.0001" min="0" placeholder="Enter purchase unit price" required />
+        </div>
+
+        <div class="field">
+          <label for="invQty">Units / Quantity</label>
+          <input id="invQty" type="number" step="0.000001" min="0" placeholder="e.g. 10.5" required />
+        </div>
+
+        <div class="field">
+          <label for="invDate">Purchase Date</label>
+          <input id="invDate" type="date" required />
+        </div>
+
+        <button class="submit-btn" type="submit">Add to Portfolio</button>
+      </form>
+    </div>
+
+    <div class="table-card" style="margin-top: 0;">
+      <div class="panel-header">
+        <div><span class="section-label">Valuation</span><h3>Investment Portfolio</h3></div>
+        <button class="btn-secondary" onclick="fetchInvestments()" style="padding: 6px 12px; font-size: 0.75rem;">Refresh Market</button>
+      </div>
+      <div class="table-wrap" style="max-height: 480px; overflow-y: auto;">
+        <table>
+          <thead>
+          <tr>
+            <th>Asset</th>
+            <th>Buy Price</th>
+            <th>Live Price</th>
+            <th>Units</th>
+            <th>Invested</th>
+            <th>Current</th>
+            <th>P/L</th>
+            <th>Action</th>
+          </tr>
+          </thead>
+          <tbody id="portfolioTableBody">
+          <tr><td colspan="8" style="text-align: center; color: var(--muted); padding: 24px;">Loading market data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEW: Portfolio Visualizations Section -->
+  <section class="content-grid" style="margin-top: 26px;">
+    <article class="panel">
+      <div class="panel-header"><div><span class="section-label">Composition</span><h3>Portfolio Allocation (%)</h3></div></div>
+      <div class="chart-container"><canvas id="portfolioAllocationChart"></canvas></div>
+    </article>
+    <article class="panel">
+      <div class="panel-header"><div><span class="section-label">Performance</span><h3>Invested vs. Current Value</h3></div></div>
+      <div class="chart-container"><canvas id="portfolioPerformanceChart"></canvas></div>
+    </article>
+  </section>
+
+  <section class="table-card" id="transactions">
+    <div class="panel-header"><div><span class="section-label">Database</span><h3>Recent Activity</h3></div></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>Title</th>
+          <th>Category</th>
+          <th>Type</th>
+          <th>Payment</th>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Action</th>
+        </tr>
+        </thead>
+        <tbody id="transactionTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+  const txApiBase = "/api/transactions";
+  const budgetApiBase = "/api/budgets";
+  const invApiBase = "/api/investments";
+
+  const defaultBudgets = { Housing: 0, Food: 0, Travel: 0, Bills: 0, Leisure: 0, Other: 0 };
+  const categoryOptions = {
+    INCOME: ["Salary", "Freelance"],
+    EXPENSE: ["Housing", "Food", "Travel", "Bills", "Leisure", "Other"]
+  };
+
+  const state = {
+    chartRange: "monthly",
+    overviewRange: "monthly",
+    budgets: { ...defaultBudgets },
+    transactions: [],
+    investments: []
+  };
+
+  const staticAssets = {
+    Crypto: [
+      { id: "bitcoin", name: "Bitcoin (BTC)" },
+      { id: "ethereum", name: "Ethereum (ETH)" },
+      { id: "solana", name: "Solana (SOL)" },
+      { id: "binancecoin", name: "Binance Coin (BNB)" },
+      { id: "ripple", name: "XRP (Ripple)" }
+    ],
+    Bonds: [
+      { id: "GOI_718_2033", name: "7.18% GS 2033 (Govt of India)" },
+      { id: "RBI_FLOAT_2028", name: "RBI Floating Rate Bond" },
+      { id: "HDFC_CORP_BOND", name: "HDFC 7.85% Corporate Bond" },
+      { id: "NHAI_TAX_FREE", name: "NHAI 7.35% Tax-Free Bond" }
+    ],
+    Stocks: [
+      { id: "MRF.NS", name: "MRF Ltd (NSE)" },
+      { id: "ICICIBANK.NS", name: "ICICI Bank Ltd (NSE)" },
+      { id: "RELIANCE.NS", name: "Reliance Industries (NSE)" },
+      { id: "TCS.NS", name: "Tata Consultancy Services (NSE)" },
+      { id: "HDFCBANK.NS", name: "HDFC Bank Ltd (NSE)" },
+      { id: "INFY.NS", name: "Infosys Ltd (NSE)" },
+      { id: "AAPL", name: "Apple Inc. (US)" }
+    ]
+  };
+
+  function updateCategoryDropdown() {
+    const typeSelect = document.getElementById("entryType");
+    const categorySelect = document.getElementById("entryCategory");
+    const availableCategories = categoryOptions[typeSelect.value] || [];
+    categorySelect.innerHTML = availableCategories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
+  }
+
+  function isCurrentMonth(dStr) {
+    if (!dStr) return false;
+    const d = new Date(dStr), now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }
+  function isCurrentQuarter(dStr) {
+    if (!dStr) return false;
+    const d = new Date(dStr), now = new Date();
+    return d.getFullYear() === now.getFullYear() && Math.floor(now.getMonth()/3) === Math.floor(d.getMonth()/3);
+  }
+  function isCurrentYear(dStr) {
+    if (!dStr) return false;
+    return new Date(dStr).getFullYear() === new Date().getFullYear();
+  }
+  function isInSelectedRange(dStr) {
+    if (state.overviewRange === 'monthly') return isCurrentMonth(dStr);
+    if (state.overviewRange === 'quarterly') return isCurrentQuarter(dStr);
+    if (state.overviewRange === 'yearly') return isCurrentYear(dStr);
+    return true;
+  }
+
+  async function fetchBudgets() {
+    try {
+      const res = await fetch(budgetApiBase);
+      if (!res.ok) throw new Error("Budget DB offline");
+      const data = await res.json();
+      Object.keys(defaultBudgets).forEach(k => state.budgets[k] = 0);
+      data.forEach(b => { if (state.budgets[b.category] !== undefined) state.budgets[b.category] = Number(b.monthlyLimit) || 0; });
+    } catch (e) { console.error(e); }
+  }
+
+  async function fetchTransactions() {
+    const statusText = document.getElementById("dbStatus");
+    statusText.textContent = "Syncing...";
+    try {
+      await fetchBudgets();
+      const res = await fetch(txApiBase);
+      if (!res.ok) throw new Error("Backend offline");
+      const data = await res.json();
+      state.transactions = data.map(t => ({
+        id: t.id,
+        title: t.description ? t.description.split(" | ")[0] : "Untitled",
+        type: (t.type || "EXPENSE").toLowerCase(),
+        category: t.category,
+        paymentMethod: t.paymentMethod || 'Cash',
+        amount: Number(t.amount || 0),
+        date: t.date || new Date().toISOString().split("T")[0]
+      }));
+      statusText.textContent = "Live: Connected to DB";
+      statusText.style.color = "var(--success)";
+      renderAll();
+      fetchInvestments();
+    } catch (e) {
+      console.error(e);
+      statusText.textContent = "Offline: Check Backend!";
+      statusText.style.color = "var(--danger)";
+      state.transactions = [];
+      renderAll();
+    }
+  }
+
+  function formatCurrency(val) {
+    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(val);
+  }
+
+  function getTotalIncome() { return state.transactions.filter(t => t.type === "income" && isInSelectedRange(t.date)).reduce((s, t) => s + t.amount, 0); }
+  function getTotalExpense() { return state.transactions.filter(t => t.type === "expense" && isInSelectedRange(t.date)).reduce((s, t) => s + t.amount, 0); }
+  function getBudgetTotal() { return Object.values(state.budgets).reduce((s, v) => s + Number(v || 0), 0); }
+
+  function getMonthlyTrend(range) {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const labels = [], incomeData = [], expenseData = [];
+    if (range === "daily") {
+      const today = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today); d.setDate(today.getDate() - i);
+        labels.push(d.toLocaleDateString("en-US", { day: "numeric", month: "short" }));
+        incomeData.push(state.transactions.filter(t => t.type === "income" && new Date(t.date).toDateString() === d.toDateString()).reduce((s, t) => s + t.amount, 0));
+        expenseData.push(state.transactions.filter(t => t.type === "expense" && new Date(t.date).toDateString() === d.toDateString()).reduce((s, t) => s + t.amount, 0));
+      }
+    } else if (range === "monthly") {
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(); d.setMonth(d.getMonth() - i);
+        labels.push(monthNames[d.getMonth()]);
+        incomeData.push(state.transactions.filter(t => t.type === "income" && new Date(t.date).getFullYear() === d.getFullYear() && new Date(t.date).getMonth() === d.getMonth()).reduce((s, t) => s + t.amount, 0));
+        expenseData.push(state.transactions.filter(t => t.type === "expense" && new Date(t.date).getFullYear() === d.getFullYear() && new Date(t.date).getMonth() === d.getMonth()).reduce((s, t) => s + t.amount, 0));
+      }
+    } else if (range === "quarterly") {
+      for (let i = 0; i < 4; i++) {
+        labels.push(`Q${i+1}`);
+        incomeData.push(state.transactions.filter(t => t.type === "income" && Math.floor(new Date(t.date).getMonth() / 3) === i).reduce((s, t) => s + t.amount, 0));
+        expenseData.push(state.transactions.filter(t => t.type === "expense" && Math.floor(new Date(t.date).getMonth() / 3) === i).reduce((s, t) => s + t.amount, 0));
+      }
+    } else {
+      for (const year of [2023, 2024, 2025, 2026]) {
+        labels.push(String(year));
+        incomeData.push(state.transactions.filter(t => t.type === "income" && new Date(t.date).getFullYear() === year).reduce((s, t) => s + t.amount, 0));
+        expenseData.push(state.transactions.filter(t => t.type === "expense" && new Date(t.date).getFullYear() === year).reduce((s, t) => s + t.amount, 0));
+      }
+    }
+    return { labels, incomeData, expenseData };
+  }
+
+  function getVarianceList() {
+    return Object.keys(state.budgets).map(category => {
+      const spent = state.transactions.filter(t => t.type === "expense" && t.category === category && isCurrentMonth(t.date)).reduce((s, i) => s + i.amount, 0);
+      const budget = state.budgets[category] || 0;
+      const diff = spent - budget;
+      return { category, delta: Math.abs(diff), direction: diff > 0 ? "up" : "down", budgetIsZero: budget === 0 };
+    });
+  }
+
+  function renderOverview() {
+    const totalIncome = getTotalIncome(), totalExpense = getTotalExpense(), savings = totalIncome - totalExpense;
+    const selectedCat = document.getElementById("budgetCardCategory").value;
+    let targetBudget = selectedCat === "ALL" ? getBudgetTotal() : (state.budgets[selectedCat] || 0);
+    let targetExpense = state.transactions.filter(t => t.type === "expense" && (selectedCat === "ALL" || t.category === selectedCat) && isCurrentMonth(t.date)).reduce((s, t) => s + t.amount, 0);
+
+    const prefix = state.overviewRange === 'monthly' ? 'Monthly' : state.overviewRange === 'quarterly' ? 'Quarterly' : 'Yearly';
+    document.getElementById("label-income").textContent = `${prefix} Income`;
+    document.getElementById("label-expense").textContent = `${prefix} Expense`;
+    document.getElementById("label-saved").textContent = `${prefix} Saved`;
+
+    document.getElementById("sum-income").textContent = formatCurrency(totalIncome);
+    document.getElementById("sum-expense").textContent = formatCurrency(totalExpense);
+    document.getElementById("sum-saved").textContent = formatCurrency(savings);
+    document.getElementById("budget-left").textContent = formatCurrency(Math.max(targetBudget - targetExpense, 0));
+
+    const pct = totalIncome > 0 ? Math.round((totalExpense / totalIncome) * 100) : (totalExpense > 0 ? 999 : 0);
+    document.getElementById("gaugeValue").textContent = `${pct}%`;
+
+    const gaugeRing = document.getElementById("gaugeRing");
+    gaugeRing.style.setProperty("--value", Math.min(100, pct));
+    if (pct > 100) {
+      gaugeRing.style.setProperty("--ring-color", "var(--danger)");
+    } else {
+      gaugeRing.style.setProperty("--ring-color", "var(--accent)");
+    }
+
+    document.getElementById("legend-income").textContent = formatCurrency(totalIncome);
+    document.getElementById("legend-expense").textContent = formatCurrency(totalExpense);
+  }
+
+  function renderBudgetChart() {
+    const trend = getMonthlyTrend(state.chartRange);
+    const chartCtx = document.getElementById("budgetChart");
+    if (window.expenseChart) window.expenseChart.destroy();
+    window.expenseChart = new Chart(chartCtx, {
+      type: "line",
+      data: {
+        labels: trend.labels,
+        datasets: [
+          { label: "Income", data: trend.incomeData, borderColor: "#c6ffe5", tension: 0.35 },
+          { label: "Expense", data: trend.expenseData, borderColor: "#7ef7bc", backgroundColor: "rgba(126, 247, 188, 0.18)", fill: true, tension: 0.35 }
+        ]
+      },
+      options: { maintainAspectRatio: false, scales: { x: { grid: { color: "rgba(255,255,255,0.04)" } }, y: { grid: { color: "rgba(255,255,255,0.04)" } } } }
+    });
+  }
+
+  function renderCategoryChart() {
+    const categories = Object.keys(state.budgets);
+    const data = categories.map(category => ({
+      category,
+      total: state.transactions.filter(t => t.type === "expense" && t.category === category && isInSelectedRange(t.date)).reduce((s, i) => s + i.amount, 0)
+    }));
+    const chartCtx = document.getElementById("categoryChart");
+    if (window.catChartInstance) window.catChartInstance.destroy();
+    window.catChartInstance = new Chart(chartCtx, {
+      type: "doughnut",
+      data: { labels: data.map(i => i.category), datasets: [{ data: data.map(i => i.total), backgroundColor: ["#7ef7bc", "#67d9a4", "#9ef7d5", "#f4d66b", "#ffb870", "#ff7f8c"] }] },
+      options: { maintainAspectRatio: false, cutout: "58%" }
+    });
+  }
+
+  function renderVarianceList() {
+    document.getElementById("varianceList").innerHTML = getVarianceList().map(item => `
+          <div class="variance-item">
+            <div>${item.category}</div>
+            <div style="font-weight: 700; color: ${item.direction === 'up' ? 'var(--danger)' : 'var(--accent)'};">${item.direction === 'up' ? '▲' : '▼'} ${formatCurrency(item.delta)}</div>
+            <div style="color: var(--muted); font-size: 0.8rem;">${item.budgetIsZero ? 'No limit' : (item.direction === 'up' ? 'Over' : 'Under')}</div>
+          </div>
+        `).join("");
+  }
+
+  function renderBudgetTable() {
+    const tbody = document.getElementById("budgetTableBody");
+    const active = Object.entries(state.budgets).filter(([_, amt]) => amt > 0);
+    tbody.innerHTML = active.length === 0 ? `<tr><td colspan="3" style="text-align: center; color: var(--muted); padding: 12px;">No active budgets</td></tr>` :
+            active.map(([cat, amt]) => `
+            <tr>
+              <td>${cat}</td>
+              <td>${formatCurrency(amt)}</td>
+              <td><button class="del-budget-btn" data-category="${cat}">Delete</button></td>
+            </tr>
+          `).join("");
+
+    document.querySelectorAll(".del-budget-btn").forEach(btn => {
+      btn.onclick = async () => {
+        await fetch(`${budgetApiBase}/category/${btn.dataset.category}`, { method: 'DELETE' });
+        fetchTransactions();
+      };
+    });
+  }
+
+  function renderTransactions() {
+    const tbody = document.getElementById("transactionTableBody");
+    const sorted = [...state.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+    tbody.innerHTML = sorted.map(item => `
+          <tr>
+            <td style="font-weight: 600;">${item.title}</td>
+            <td>${item.category}</td>
+            <td><span class="type-pill ${item.type}">${item.type}</span></td>
+            <td style="color: var(--muted);">${item.paymentMethod}</td>
+            <td>${new Date(item.date).toLocaleDateString("en-IN")}</td>
+            <td>${formatCurrency(item.amount)}</td>
+            <td><button class="del-btn" data-id="${item.id}">Delete</button></td>
+          </tr>
+        `).join("");
+
+    document.querySelectorAll(".del-btn").forEach(btn => {
+      btn.onclick = async () => {
+        if (confirm("Delete entry?")) {
+          await fetch(`${txApiBase}/${btn.dataset.id}`, { method: 'DELETE' });
+          fetchTransactions();
+        }
+      };
+    });
+  }
+
+  // ==========================================
+  // MULTI-ASSET INVESTMENT SEARCH & CHARTS
+  // ==========================================
+
+  const invCategorySelect = document.getElementById("invCategory");
+  const invSearchInput = document.getElementById("invSearch");
+  const searchResultsBox = document.getElementById("searchResults");
+  const yieldField = document.getElementById("yieldField");
+
+  invCategorySelect.addEventListener("change", function() {
+    invSearchInput.value = "";
+    document.getElementById("invAssetId").value = "";
+    document.getElementById("invAssetName").value = "";
+    searchResultsBox.style.display = "none";
+    yieldField.style.display = this.value === "Bonds" ? "block" : "none";
+  });
+
+  let searchTimeout = null;
+  invSearchInput.addEventListener("input", function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+    const category = invCategorySelect.value;
+
+    if (query.length < 2) {
+      searchResultsBox.style.display = "none";
+      return;
+    }
+
+    searchTimeout = setTimeout(async () => {
+      let items = [];
+      if (category === "Crypto") {
+        try {
+          const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
+          const data = await res.json();
+          items = (data.coins || []).slice(0, 8).map(c => ({ id: c.id, name: `${c.name} (${c.symbol})` }));
+        } catch (err) { items = staticAssets.Crypto.filter(c => c.name.toLowerCase().includes(query.toLowerCase())); }
+      } else {
+        items = (staticAssets[category] || []).filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
+      }
+
+      if (items.length > 0) {
+        searchResultsBox.innerHTML = items.map(it => `<div class="search-item" data-id="${it.id}" data-name="${it.name}">${it.name}</div>`).join("");
+        searchResultsBox.style.display = "block";
+        document.querySelectorAll(".search-item").forEach(el => {
+          el.onclick = () => {
+            invSearchInput.value = el.dataset.name;
+            document.getElementById("invAssetId").value = el.dataset.id;
+            document.getElementById("invAssetName").value = el.dataset.name;
+            searchResultsBox.style.display = "none";
+          };
+        });
+      } else {
+        searchResultsBox.style.display = "none";
+      }
+    }, 300);
+  });
+
+  async function fetchInvestments() {
+    try {
+      const res = await fetch(invApiBase);
+      if (res.ok) {
+        state.investments = await res.json();
+        renderPortfolio();
+      }
+    } catch (e) { console.error("Investment fetch failed", e); }
+  }
+
+  async function renderPortfolio() {
+    const tbody = document.getElementById("portfolioTableBody");
+    if (state.investments.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--muted); padding: 24px;">No investments logged.</td></tr>`;
+      renderInvestmentCharts([]);
+      return;
+    }
+
+    const cryptoIds = [...new Set(state.investments.filter(i => i.category === 'Crypto').map(i => i.assetId))].join(",");
+    let cryptoPrices = {};
+    if (cryptoIds) {
+      try {
+        const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=inr`);
+        cryptoPrices = await res.json();
+      } catch (e) { console.warn("Crypto quote limit hit"); }
+    }
+
+    const stockMap = {};
+    const stockInvestments = state.investments.filter(i => i.category === 'Stocks');
+    await Promise.all(stockInvestments.map(async inv => {
+      try {
+        const res = await fetch(`/api/market/stock?symbol=${encodeURIComponent(inv.assetId)}`);
+        const stockJson = await res.json();
+        if (stockJson.c) {
+          stockMap[inv.assetId] = parseFloat(stockJson.c);
+        }
+      } catch (e) { console.warn(`Stock quote fetch failed for ${inv.assetId}`); }
+    }));
+
+    const enrichedInvestments = state.investments.map(inv => {
+      let livePrice = inv.buyPrice;
+      let badge = "Fixed";
+
+      if (inv.category === "Crypto") {
+        if (cryptoPrices[inv.assetId]) {
+          livePrice = cryptoPrices[inv.assetId].inr;
+          badge = "CoinGecko";
+        }
+      } else if (inv.category === "Stocks") {
+        if (stockMap[inv.assetId]) {
+          livePrice = stockMap[inv.assetId];
+          badge = "Live: Yahoo";
+        } else {
+          badge = "API / Closed";
+        }
+      } else if (inv.category === "Bonds") {
+        const daysPassed = Math.max(1, (new Date() - new Date(inv.date)) / (1000 * 60 * 60 * 24));
+        const annualRate = (inv.annualYield || 7.0) / 100;
+        livePrice = inv.buyPrice * (1 + (annualRate * (daysPassed / 365)));
+        badge = `${(annualRate * 100).toFixed(1)}% Yield`;
+      }
+
+      const investedVal = inv.buyPrice * inv.quantity;
+      const currentVal = livePrice * inv.quantity;
+      const pl = currentVal - investedVal;
+
+      return { ...inv, livePrice, badge, investedVal, currentVal, pl };
+    });
+
+    tbody.innerHTML = enrichedInvestments.map(inv => {
+      const isProfitable = inv.pl >= 0;
+      return `
+            <tr>
+              <td>
+                <strong>${inv.assetName}</strong>
+                <small style="display:block; color:var(--muted); font-size:0.75rem;">${inv.category} • ${inv.badge}</small>
+              </td>
+              <td>${formatCurrency(inv.buyPrice)}</td>
+              <td>${formatCurrency(inv.livePrice)}</td>
+              <td>${inv.quantity}</td>
+              <td>${formatCurrency(inv.investedVal)}</td>
+              <td style="font-weight: 700;">${formatCurrency(inv.currentVal)}</td>
+              <td style="color: ${isProfitable ? 'var(--accent)' : 'var(--danger)'}; font-weight: 700;">
+                ${isProfitable ? '▲' : '▼'} ${formatCurrency(Math.abs(inv.pl))}
+              </td>
+              <td><button class="del-btn" onclick="deleteInvestment(${inv.id})">Delete</button></td>
+            </tr>
+          `;
+    }).join("");
+
+    renderInvestmentCharts(enrichedInvestments);
+  }
+
+  function renderInvestmentCharts(investments) {
+    // 1. Asset Allocation Donut Chart
+    const categories = ["Stocks", "Crypto", "Bonds"];
+    const categoryTotals = categories.map(cat => {
+      return investments.filter(i => i.category === cat).reduce((sum, i) => sum + (i.currentVal || 0), 0);
+    });
+
+    const allocCtx = document.getElementById("portfolioAllocationChart");
+    if (window.allocationChartInstance) window.allocationChartInstance.destroy();
+    window.allocationChartInstance = new Chart(allocCtx, {
+      type: "doughnut",
+      data: {
+        labels: categories,
+        datasets: [{
+          data: categoryTotals,
+          backgroundColor: ["#38bdf8", "#fb7185", "#c084fc"]
+        }]
+      },
+      options: { maintainAspectRatio: false, cutout: "58%" }
+    });
+
+    // 2. Invested vs Current Value Bar Chart
+    const labels = investments.map(i => i.assetName);
+    const investedData = investments.map(i => i.investedVal);
+    const currentData = investments.map(i => i.currentVal);
+
+    const perfCtx = document.getElementById("portfolioPerformanceChart");
+    if (window.performanceChartInstance) window.performanceChartInstance.destroy();
+    window.performanceChartInstance = new Chart(perfCtx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          { label: "Invested Capital", data: investedData, backgroundColor: "rgba(156, 196, 174, 0.4)", borderColor: "#9cc4ae", borderWidth: 1 },
+          { label: "Current Value", data: currentData, backgroundColor: "rgba(126, 247, 188, 0.7)", borderColor: "#7ef7bc", borderWidth: 1 }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { color: "rgba(255,255,255,0.04)" } },
+          y: { grid: { color: "rgba(255,255,255,0.04)" } }
+        }
+      }
+    });
+  }
+
+  async function deleteInvestment(id) {
+    if (confirm("Delete investment entry?")) {
+      await fetch(`${invApiBase}/${id}`, { method: 'DELETE' });
+      fetchInvestments();
+    }
+  }
+
+  document.getElementById("investmentForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const nameInput = document.getElementById("invSearch").value.trim();
+    const buyPrice = Number(document.getElementById("invBuyPrice").value);
+
+    const payload = {
+      category: document.getElementById("invCategory").value,
+      assetId: document.getElementById("invAssetId").value || nameInput.toLowerCase(),
+      assetName: document.getElementById("invAssetName").value || nameInput,
+      buyPrice: buyPrice,
+      currentPrice: buyPrice,
+      quantity: Number(document.getElementById("invQty").value),
+      annualYield: Number(document.getElementById("invYield").value || 0),
+      date: document.getElementById("invDate").value
+    };
+
+    try {
+      const res = await fetch(invApiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Save rejected by backend: ${errorText}`);
+      }
+
+      this.reset();
+      document.getElementById("invDate").valueAsDate = new Date();
+      document.getElementById("yieldField").style.display = "none";
+      fetchInvestments();
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to log investment to database. Error: ${err.message}`);
+    }
+  });
+
+  function renderAll() {
+    renderOverview(); renderBudgetChart(); renderCategoryChart(); renderVarianceList(); renderBudgetTable(); renderTransactions();
+  }
+
+  document.getElementById("overviewRange").onchange = (e) => { state.overviewRange = e.target.value; renderOverview(); renderCategoryChart(); };
+  document.getElementById("budgetCardCategory").onchange = renderOverview;
+  document.getElementById("entryType").onchange = updateCategoryDropdown;
+  document.getElementById("invDate").valueAsDate = new Date();
+  document.getElementById("entryDate").valueAsDate = new Date();
+
+  document.getElementById("budgetForm").onsubmit = async function(e) {
+    e.preventDefault();
+    await fetch(budgetApiBase, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: document.getElementById("budgetCategory").value, monthlyLimit: Number(document.getElementById("budgetAmount").value) })
+    });
+    this.reset();
+    fetchTransactions();
+  };
+
+  document.getElementById("entryForm").onsubmit = async function(e) {
+    e.preventDefault();
+    await fetch(txApiBase, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        description: document.getElementById("entryTitle").value,
+        type: document.getElementById("entryType").value,
+        category: document.getElementById("entryCategory").value,
+        paymentMethod: document.getElementById("entryPayment").value,
+        amount: Number(document.getElementById("entryAmount").value),
+        date: document.getElementById("entryDate").value
+      })
+    });
+    this.reset();
+    document.getElementById("entryDate").valueAsDate = new Date();
+    fetchTransactions();
+  };
+
+  document.getElementById("rangeSwitcher").onclick = (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    document.querySelectorAll("#rangeSwitcher button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.chartRange = btn.dataset.range;
+    renderBudgetChart();
+  };
+
+  document.getElementById("viewTrendsBtn").onclick = () => document.getElementById("budget").scrollIntoView({ behavior: "smooth" });
+  document.getElementById("setBudgetBtn").onclick = () => document.getElementById("budget-form-card").scrollIntoView({ behavior: "smooth" });
+
+  updateCategoryDropdown();
+  fetchTransactions();
+</script>
+</body>
+</html>
